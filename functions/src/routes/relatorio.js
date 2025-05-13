@@ -21,7 +21,7 @@ router.get("/:uid", async (req, res) => {
 
     snapshot.forEach((doc) => {
       const data = doc.data();
-      totalRecycled += 1;
+      totalRecycled += data.quantidade;
       totalPontos += data.pontos || 0;
     });
 
@@ -60,12 +60,18 @@ router.get("/lixo-reciclado/:id", async (req, res) => {
         .get();
 
     let recycled_eletronics = 0;
+    let pontos = 0;
 
-    eletronicsSnap.forEach(() => recycled_eletronics++);
+    eletronicsSnap.forEach((doc) => {
+      const data = doc.data();
+      recycled_eletronics += data.quantidade;
+      pontos += data.pontos || 0;
+    });
 
     res.status(200).json({
       localId: id,
-      recycled_eletronics
+      recycled_eletronics,
+      pontos
     });
   } catch (error) {
     console.error("Erro ao calcular lixo reciclado:", error);
@@ -94,13 +100,19 @@ router.get("/lixo-reciclado/:id_user/:id_local", async (req, res) => {
         .get();
 
     let recycled_eletronics = 0;
+    let pontos = 0;
 
-    eletronicsSnap.forEach(() => recycled_eletronics++);
+    eletronicsSnap.forEach((doc) => {
+      const data = doc.data();
+      recycled_eletronics += data.quantidade;
+      pontos += data.pontos || 0;
+    });
 
     res.status(200).json({
       uid: id_user,
       localId: id_local,
-      recycled_eletronics
+      recycled_eletronics,
+      pontos
     });
   } catch (error) {
     console.error("Erro ao calcular lixo reciclado:", error);

@@ -24,15 +24,13 @@ router.post("/", async (req, res) => {
   const {
     uid,
     categoria,
-    marca,
-    modelo,
-    foto,
+    quantidade,
     localDescarte,
     pontos,
   } = req.body;
 
   // eslint-disable-next-line max-len
-  if (!uid || !categoria || !marca || !modelo || !foto || !localDescarte || !pontos) {
+  if (!uid || !categoria || !quantidade || !localDescarte || !pontos) {
     return res.status(400).json({message: "Todos os dados são obrigatórios."});
   }
 
@@ -50,9 +48,7 @@ router.post("/", async (req, res) => {
     await db.collection("recycled_eletronics").add({
       uid,
       categoria,
-      marca,
-      modelo,
-      foto,
+      quantidade,
       localDescarte,
       pontos,
       criadoEm: Timestamp.now(),
