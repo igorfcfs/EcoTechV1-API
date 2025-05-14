@@ -51,6 +51,7 @@ router.post("/", async (req, res) => {
       quantidade,
       localDescarte,
       pontos,
+      show: true,
       criadoEm: Timestamp.now(),
     });
 

@@ -1,5 +1,6 @@
 const express = require("express");
 const {db} = require("../firebaseConfig");
+const { getDistance } = require('geolib');
 
 const router = express.Router();
 
@@ -14,6 +15,59 @@ router.get("/", async (req, res) => {
   } catch (error) {
     console.error("Erro ao buscar locais:", error);
     res.status(500).json({erro: "Erro ao buscar locais"});
+  }
+});
+
+router.get("/local_mais_proximo", async (req, res) => {
+  const { lat, lng } = req.query;
+
+  if (!lat || !lng) {
+    return res.status(400).json({ erro: "Latitude e longitude são obrigatórias." });
+  }
+
+  const userCoords = {
+    latitude: parseFloat(lat),
+    longitude: parseFloat(lng),
+  };
+
+  try {
+    const snapshot = await db.collection("locations").get();
+    const locais = [];
+
+    snapshot.forEach((doc) => {
+      const data = doc.data();
+      const latitude = data.coordenadas?._latitude;
+      const longitude = data.coordenadas?._longitude;
+
+      if (latitude && longitude) {
+        const distancia = getDistance(userCoords, {
+          latitude,
+          longitude,
+        });
+
+        locais.push({
+          id: doc.id,
+          nome: data.nome || "Sem nome",
+          distancia,
+        });
+      }
+    });
+
+    if (locais.length === 0) {
+      return res.status(404).json({ erro: "Nenhum local de descarte encontrado." });
+    }
+
+    locais.sort((a, b) => a.distancia - b.distancia);
+    const maisProximo = locais[0];
+
+    res.status(200).json({
+      id_local: maisProximo.id,
+      nome_local: maisProximo.nome,
+      distancia: maisProximo.distancia, // em metros
+    });
+  } catch (error) {
+    console.error("Erro ao buscar local mais próximo:", error);
+    res.status(500).json({ erro: "Erro interno ao buscar local mais próximo." });
   }
 });
 
