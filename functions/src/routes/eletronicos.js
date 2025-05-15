@@ -19,6 +19,60 @@ router.get("/", async (req, res) => {
   }
 });
 
+router.get("/usuario/:uid", async (req, res) => {
+  const uid = req.params.uid;
+
+  if (!uid) {
+    return res.status(400).json({ message: "UID do usuário é obrigatório." });
+  }
+
+  try {
+    const snapshot = await db
+      .collection("recycled_eletronics")
+      .where("uid", "==", uid)
+      .orderBy("criadoEm", "desc") // ordena por data, do mais novo para o mais antigo
+      .get();
+
+    const eletronicos = [];
+    snapshot.forEach((doc) => {
+      eletronicos.push({ id: doc.id, ...doc.data() });
+    });
+
+    return res.status(200).json(eletronicos);
+  } catch (error) {
+    console.error("Erro ao buscar eletrônicos do usuário:", error);
+    return res.status(500).json({ message: "Erro ao buscar eletrônicos." });
+  }
+});
+
+router.get("/usuario-soft/:uid", async (req, res) => {
+  const uid = req.params.uid;
+
+  if (!uid) {
+    return res.status(400).json({ message: "UID do usuário é obrigatório." });
+  }
+
+  try {
+    const snapshot = await db
+      .collection("recycled_eletronics")
+      .where("uid", "==", uid)
+      .where("show", "==", true) // opcional: se usar soft delete
+      .orderBy("criadoEm", "desc") // ordena por data, do mais novo para o mais antigo
+      .get();
+
+    const eletronicos = [];
+    snapshot.forEach((doc) => {
+      eletronicos.push({ id: doc.id, ...doc.data() });
+    });
+
+    return res.status(200).json(eletronicos);
+  } catch (error) {
+    console.error("Erro ao buscar eletrônicos do usuário:", error);
+    return res.status(500).json({ message: "Erro ao buscar eletrônicos." });
+  }
+});
+
+
 // o localDescarte so pode ter o id de um local existente
 router.post("/", async (req, res) => {
   const {
@@ -102,6 +156,66 @@ router.put("/:id", async (req, res) => {
       erro: "Erro ao atualizar eletrônico",
       detalhes: error.message,
     });
+  }
+});
+
+// Rota para soft delete de um eletrônico específico
+router.delete("/soft-delete/:id", async (req, res) => {
+  const id = req.params.id;
+
+  if (!id) {
+    return res.status(400).json({ message: "ID é obrigatório." });
+  }
+
+  try {
+    const docRef = db.collection("recycled_eletronics").doc(id);
+    const docSnap = await docRef.get();
+
+    if (!docSnap.exists) {
+      return res.status(404).json({ message: "Eletrônico não encontrado." });
+    }
+
+    await docRef.update({ show: false });
+
+    res.status(200).json({ message: "Eletrônico deletado do histórico com sucesso." });
+  } catch (error) {
+    console.error("Erro ao deletar eletrônico:", error);
+    res.status(500).json({ erro: "Erro ao deletar eletrônico", detalhes: error.message });
+  }
+});
+
+// Rota para soft delete de TODOS os eletrônicos de um usuário
+router.delete("/soft-delete/limpar/:uid", async (req, res) => {
+  const uid = req.params.uid;
+
+  if (!uid) {
+    return res.status(400).json({ message: "UID é obrigatório." });
+  }
+
+  try {
+    const userDoc = await db.collection("users").doc(uid).get();
+    if (!userDoc.exists) {
+      return res.status(404).json({ message: "Usuário não existe." });
+    }
+
+    const snapshot = await db
+      .collection("recycled_eletronics")
+      .where("uid", "==", uid)
+      .get();
+
+    const batch = db.batch();
+
+    snapshot.forEach((doc) => {
+      const docRef = doc.ref;
+      batch.update(docRef, { show: false });
+    });
+
+    await batch.commit();
+
+    res.status(200).json({ message: "Todos os eletrônicos do user foram ocultados com sucesso." });
+  } catch (error) {
+    console.error("Erro ao ocultar eletrônicos do usuário:", error);
+    res.status(500).json({ error: "Erro ao ocultar eletrônicos do usuário", detalhes: error.message });
   }
 });
 
